@@ -1,0 +1,12 @@
+# Keep generated binary assets byte-for-byte intact.
+*.faiss binary
+*.pdf binary
+
+# Keep common text data/doc files normalized.
+*.csv text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.txt text eol=lf

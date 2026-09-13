@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat History — Banking AI Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 300px;
+            background: rgba(15, 23, 42, 0.95);
+            border-right: 1px solid rgba(99,102,241,0.2);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(99,102,241,0.15);
+        }
+
+        .sidebar-logo {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #6366f1, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 12px;
+        }
+
+        .new-chat-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .new-chat-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+        }
+
+        .sidebar-section-title {
+            padding: 16px 20px 8px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .chat-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-radius: 0;
+            position: relative;
+            gap: 10px;
+        }
+
+        .chat-item:hover {
+            background: rgba(99,102,241,0.1);
+        }
+
+        .chat-item-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .chat-item-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-item-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #cbd5e1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .chat-item-date {
+            font-size: 11px;
+            color: #475569;
+            margin-top: 2px;
+        }
+
+        .chat-item-actions {
+            display: none;
+            gap: 4px;
+        }
+
+        .chat-item:hover .chat-item-actions {
+            display: flex;
+        }
+
+        .action-btn {
+            background: rgba(99,102,241,0.2);
+            border: none;
+            color: #94a3b8;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .action-btn:hover {
+            background: rgba(99,102,241,0.4);
+            color: white;
+        }
+
+        .action-btn.delete:hover {
+            background: rgba(239,68,68,0.3);
+            color: #fca5a5;
+        }
+
+        /* ── Main Content ── */
+        .main-content {
+            margin-left: 300px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .welcome-card {
+            text-align: center;
+            max-width: 560px;
+        }
+
+        .welcome-icon {
+            font-size: 64px;
+            margin-bottom: 24px;
+            display: block;
+        }
+
+        .welcome-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 12px;
+        }
+
+        .welcome-subtitle {
+            font-size: 16px;
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .start-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(99,102,241,0.4);
+        }
+
+        .start-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(99,102,241,0.5);
+        }
+
+        /* Empty state */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #475569;
+        }
+
+        /* Toast for rename */
+        #toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #22c55e;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            display: none;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- ── Sidebar ── -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">🏦 Banking AI</div>
+            <a href="/new_chat" class="new-chat-btn">
+                ➕ New Chat
+            </a>
+        </div>
+
+        <div class="sidebar-section-title">Recent Conversations</div>
+
+        <div class="chat-list">
+            {% if chats %}
+                {% for c in chats %}
+                <div class="chat-item" id="chat-item-{{ c['id'] }}" onclick="window.location.href='/chat/{{ c['id'] }}'">
+                    <span class="chat-item-icon">💬</span>
+                    <div class="chat-item-content">
+                        <div class="chat-item-title" id="title-{{ c['id'] }}">{{ c['title'] }}</div>
+                        <div class="chat-item-date">{{ c['created_at'][:16] if c['created_at'] else '' }}</div>
+                    </div>
+                    <div class="chat-item-actions" onclick="event.stopPropagation()">
+                        <button class="action-btn" title="Rename" onclick="renameChat({{ c['id'] }})">✏️</button>
+                        <form action="/delete_chat/{{ c['id'] }}" method="POST" style="display:inline"
+                              onsubmit="return confirm('Delete this chat?')">
+                            <button type="submit" class="action-btn delete" title="Delete">🗑️</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <p>No conversations yet.</p>
+                    <p style="margin-top:8px; font-size:13px;">Start a new chat above!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ── Main Content ── -->
+    <div class="main-content">
+        <div class="welcome-card">
+            <span class="welcome-icon">🏦</span>
+            <h1 class="welcome-title">Banking AI Assistant</h1>
+            <p class="welcome-subtitle">
+                Your intelligent 24/7 banking support agent. Ask about loans, cards,
+                transactions, account queries, and more — in English, Malayalam, Hindi, or Tamil.
+            </p>
+            <a href="/new_chat" class="start-btn">
+                ✨ Start New Conversation
+            </a>
+        </div>
+    </div>
+
+</div>
+
+<div id="toast">✅ Chat renamed!</div>
+
+<script>
+function renameChat(chatId) {
+    const current = document.getElementById('title-' + chatId).innerText;
+    const newTitle = prompt('Rename conversation:', current);
+    if (!newTitle || newTitle.trim() === '' || newTitle.trim() === current) return;
+
+    fetch('/rename_chat/' + chatId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle.trim() })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('title-' + chatId).innerText = data.title;
+        const toast = document.getElementById('toast');
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2500);
+    })
+    .catch(err => alert('Rename failed: ' + err));
+}
+</script>
+</body>
+</html>

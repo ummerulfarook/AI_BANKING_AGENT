@@ -1,0 +1,8 @@
+Flask
+deep-translator
+faiss-cpu
+numpy
+ollama
+pandas
+pypdf
+sentence-transformers

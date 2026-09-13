@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Register</title>
+</head>
+
+<body>
+
+<h2>Create Account</h2>
+
+<form id="registerForm">
+
+<input
+type="text"
+id="name"
+placeholder="Name"
+required>
+
+<br><br>
+
+<input
+type="email"
+id="email"
+placeholder="Email"
+required>
+
+<br><br>
+
+<input
+type="password"
+id="password"
+placeholder="Password"
+required>
+
+<br><br>
+
+<button type="submit">
+Register
+</button>
+
+</form>
+
+<script>
+
+document
+.getElementById("registerForm")
+.addEventListener(
+"submit",
+async function(e){
+
+    e.preventDefault();
+
+    let response =
+    await fetch(
+    "/register",
+    {
+
+        method:"POST",
+
+        headers:{
+            "Content-Type":
+            "application/json"
+        },
+
+        body:JSON.stringify({
+
+            name:
+            document
+            .getElementById("name")
+            .value,
+
+            email:
+            document
+            .getElementById("email")
+            .value,
+
+            password:
+            document
+            .getElementById("password")
+            .value
+        })
+
+    });
+
+    let data =
+    await response.json();
+
+    if(data.status==="success"){
+
+        alert(
+        "Registration Successful"
+        );
+
+        window.location.href=
+        "/login";
+    }
+
+    else{
+
+        alert(
+        "Email Already Exists"
+        );
+    }
+
+});
+
+</script>
+
+</body>
+</html>

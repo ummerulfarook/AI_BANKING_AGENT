@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Banking AI Agent</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+    <div class="chat-container">
+
+        <div class="header">
+            <div class="header-top">
+                <div>
+                    <h1>🏦 Banking AI Assistant</h1>
+                    <p>Your Smart Banking Support Agent</p>
+                </div>
+                <div class="header-buttons">
+                    {% if is_admin %}
+                    <button class="admin-btn" onclick="window.location.href='/admin/dashboard'">
+                        📊 Dashboard
+                    </button>
+                    {% endif %}
+                    <button class="history-btn" onclick="window.location.href='/history'">
+                        📜 History
+                    </button>
+                    <button id="ttsToggle" class="header-action-btn" title="Toggle Auto-Speak">
+                        🔇 TTS: Off
+                    </button>
+                    <button id="themeToggle" class="header-action-btn">
+                        🌙
+                    </button>
+                    <button class="logout-btn" onclick="window.location.href='/logout'">
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="chatbox">
+            <div class="bot-message">
+                <span class="sentiment-pill neutral">System</span>
+                <div class="message-content">
+                    👋 Welcome back, <strong>{{ user_name }}</strong>! How can I help you with your banking needs today?
+                </div>
+                <button class="speak-btn" onclick="speakText(this.previousElementSibling.innerText, 'English')">🔊</button>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <select id="langSelect" class="lang-select">
+                <option value="Auto">🌐 Auto-detect</option>
+                <option value="English">English</option>
+                <option value="Malayalam">Malayalam (മലയാളം)</option>
+                <option value="Hindi">Hindi (हिन्दी)</option>
+                <option value="Tamil">Tamil (தமிழ்)</option>
+            </select>
+
+            <textarea id="userInput" placeholder="Ask banking questions..." rows="1"></textarea>
+
+            <button id="micButton" class="icon-btn" title="Voice Input">🎤</button>
+            <button onclick="sendMessage()" class="icon-btn" title="Send">➤</button>
+        </div>
+
+    </div>
+
+    <script>
+        let autoSpeakEnabled = false;
+
+        // Toggle TTS Auto-Speak
+        document.getElementById("ttsToggle").addEventListener("click", function() {
+            autoSpeakEnabled = !autoSpeakEnabled;
+            if (autoSpeakEnabled) {
+                this.innerHTML = "🔊 TTS: On";
+                this.classList.add("active");
+            } else {
+                this.innerHTML = "🔇 TTS: Off";
+                this.classList.remove("active");
+                window.speechSynthesis.cancel();
+            }
+        });
+
+        // Speech Synthesis Map
+        const langVoiceLocales = {
+            "English": "en-US",
+            "Malayalam": "ml-IN",
+            "Hindi": "hi-IN",
+            "Tamil": "ta-IN"
+        };
+
+        function speakText(text, lang) {
+            window.speechSynthesis.cancel(); // Stop any current speaking
+
+            // Strip out markdown tags or extra characters for speaking
+            let cleanText = text.replace(/[*#_~`⚠️]/g, '').trim();
+
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            const locale = langVoiceLocales[lang] || "en-US";
+            utterance.lang = locale;
+
+            // Try to find matching voice on system
+            const voices = window.speechSynthesis.getVoices();
+            const matchingVoice = voices.find(voice => voice.lang.includes(locale) || voice.lang.startsWith(locale.split('-')[0]));
+            if (matchingVoice) {
+                utterance.voice = matchingVoice;
+            }
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        async function sendMessage() {
+            const inputField = document.getElementById("userInput");
+            let message = inputField.value.trim();
+
+            if (!message) {
+                return;
+            }
+
+            const chatBox = document.getElementById("chatbox");
+            const userDiv = document.createElement("div");
+            userDiv.className = "user";
+            userDiv.innerHTML = message.replace(/\n/g, "<br>");
+            chatBox.appendChild(userDiv);
+
+            inputField.value = "";
+            inputField.focus();
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Show typing indicator
+            const typingDiv = document.createElement("div");
+            typingDiv.className = "bot-message typing-indicator";
+            typingDiv.id = "typing-indicator";
+            typingDiv.innerHTML = `<span></span><span></span><span></span>`;
+            chatBox.appendChild(typingDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            const selectedLanguage = document.getElementById("langSelect").value;
+
+            try {
+                let response = await fetch("/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        language: selectedLanguage
+                    })
+                });
+
+                let data = await response.json();
+                document.getElementById("typing-indicator").remove();
+
+                const botDiv = document.createElement("div");
+                botDiv.className = "bot-message";
+
+                // Choose sentiment color class
+                const sentimentClass = (data.sentiment || 'neutral').toLowerCase();
+
+                let botHTML = `
+                    <div class="message-meta">
+                        <span class="intent-pill">Intent: ${data.intent}</span>
+                        <span class="sentiment-pill ${sentimentClass}">Sentiment: ${data.sentiment}</span>
+                        <span class="lang-pill">${data.language}</span>
+                    </div>
+                `;
+
+                // If fraud is detected, prepend the high-visibility security alert
+                if (data.is_fraud && data.fraud_warning) {
+                    botHTML += `
+                        <div class="fraud-banner">
+                            <span class="warning-icon">⚠️</span>
+                            <div class="warning-text">${data.fraud_warning}</div>
+                        </div>
+                    `;
+                }
+
+                // Append main bot response text
+                botHTML += `
+                    <div class="message-content">
+                        ${data.response.replace(/\n/g, "<br>")}
+                    </div>
+                    <button class="speak-btn" onclick="speakText(this.previousElementSibling.innerText, '${data.language}')">🔊 Speak</button>
+                `;
+
+                // If recommendation exists, append recommendation card
+                if (data.recommendation) {
+                    botHTML += `
+                        <div class="recommendation-card">
+                            <div class="rec-title">${data.recommendation.title}</div>
+                            <div class="rec-details">${data.recommendation.details}</div>
+                            <a href="#" onclick="alert('Opening application portal...'); return false;" class="rec-apply-btn">Apply Now</a>
+                        </div>
+                    `;
+                }
+
+                botDiv.innerHTML = botHTML;
+                chatBox.appendChild(botDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                // Auto-speak response if enabled
+                if (autoSpeakEnabled) {
+                    speakText(data.response, data.language);
+                }
+
+            } catch (error) {
+                document.getElementById("typing-indicator")?.remove();
+                const errorDiv = document.createElement("div");
+                errorDiv.className = "bot-message";
+                errorDiv.innerHTML = "⚠️ Unable to connect to AI service.";
+                chatBox.appendChild(errorDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+
+        window.onload = function() {
+            // Trigger voice synthesis load
+            window.speechSynthesis.getVoices();
+
+            const input = document.getElementById("userInput");
+            input.addEventListener("keydown", function(event) {
+                if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            document.getElementById("themeToggle").addEventListener("click", function() {
+                document.body.classList.toggle("dark-mode");
+            });
+
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                const micBtn = document.getElementById("micButton");
+                micBtn.addEventListener("click", function() {
+                    const selectedLanguage = document.getElementById("langSelect").value;
+                    if (selectedLanguage !== "Auto" && langVoiceLocales[selectedLanguage]) {
+                        recognition.lang = langVoiceLocales[selectedLanguage];
+                    } else {
+                        recognition.lang = "en-US";
+                    }
+                    recognition.start();
+                    micBtn.style.background = "#ef4444";
+                });
+
+                recognition.onresult = function(event) {
+                    input.value = event.results[0][0].transcript;
+                    micBtn.style.background = "";
+                };
+
+                recognition.onerror = function() {
+                    micBtn.style.background = "";
+                };
+
+                recognition.onend = function() {
+                    micBtn.style.background = "";
+                };
+            }
+        };
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+MODEL_NAME = "phi3"
+
+TOP_K = 2
+
+TEMPERATURE = 0.3
+
+MAX_TOKENS = 80
