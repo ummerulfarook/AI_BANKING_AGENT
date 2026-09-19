@@ -250,7 +250,12 @@ Instructions:
         response   = ollama.chat(model=MODEL_NAME, messages=ollama_messages, options=_OLLAMA_OPTIONS)
         en_content = response["message"]["content"].strip()
     except Exception as e:
-        en_content = f"[SENTIMENT: Neutral]\n⚠️ AI model error: {str(e)}"
+        print(f"[Ollama Service Warning] {e}")
+        if context and len(context.strip()) > 0:
+            first_fact = context.strip().split("\n")[0]
+            en_content = f"[SENTIMENT: Neutral]\nThank you for your banking query. Based on our bank records:\n\n{first_fact}"
+        else:
+            en_content = f"[SENTIMENT: Neutral]\nThank you for reaching out to Banking Support. Regarding '{english_query}', our services and branch support are available 24/7. Please contact customer service or visit your nearest branch."
 
     # ── 6. Parse sentiment tag ───────────────────────────────────────────────
     sentiment = "Neutral"

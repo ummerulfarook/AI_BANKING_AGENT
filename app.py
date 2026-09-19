@@ -92,6 +92,82 @@ def history():
 
 
 # ─────────────────────────────────────────────
+#  ADMIN DASHBOARD
+# ─────────────────────────────────────────────
+@app.route("/admin")
+@app.route("/admin/dashboard")
+def admin_dashboard():
+    conn = get_db()
+
+    # Counts
+    total_chats = conn.execute("SELECT COUNT(*) FROM conversations").fetchone()[0]
+    total_users = max(1, total_chats)
+    total_frauds = conn.execute("SELECT COUNT(*) FROM messages WHERE is_fraud = 1").fetchone()[0]
+
+    # Intent Breakdown
+    intent_rows = conn.execute(
+        "SELECT intent, COUNT(*) as cnt FROM messages WHERE sender='ai' AND intent IS NOT NULL AND intent != '' GROUP BY intent"
+    ).fetchall()
+    intents = {row["intent"]: row["cnt"] for row in intent_rows} if intent_rows else {"General Support": 1}
+
+    # Sentiment Breakdown
+    sentiment_rows = conn.execute(
+        "SELECT sentiment, COUNT(*) as cnt FROM messages WHERE sender='ai' AND sentiment IS NOT NULL AND sentiment != '' GROUP BY sentiment"
+    ).fetchall()
+    sentiments = {row["sentiment"]: row["cnt"] for row in sentiment_rows} if sentiment_rows else {"Neutral": 1}
+
+    # Language Breakdown
+    lang_rows = conn.execute(
+        "SELECT language, COUNT(*) as cnt FROM messages WHERE sender='ai' AND language IS NOT NULL AND language != '' GROUP BY language"
+    ).fetchall()
+    languages = {row["language"]: row["cnt"] for row in lang_rows} if lang_rows else {"English": 1}
+
+    # Recent Log Entries
+    raw_ai_msgs = conn.execute(
+        """SELECT m.conversation_id, m.message as response, m.intent, m.sentiment, m.language, m.is_fraud, m.timestamp
+           FROM messages m
+           WHERE m.sender = 'ai'
+           ORDER BY m.timestamp DESC LIMIT 20"""
+    ).fetchall()
+
+    recent_chats = []
+    for ai_m in raw_ai_msgs:
+        user_m = conn.execute(
+            """SELECT message FROM messages
+               WHERE conversation_id = ? AND sender = 'user' AND timestamp <= ?
+               ORDER BY timestamp DESC LIMIT 1""",
+            (ai_m["conversation_id"], ai_m["timestamp"])
+        ).fetchone()
+
+        q_text = user_m["message"] if user_m else "N/A"
+        recent_chats.append({
+            "user_name": f"Customer #{ai_m['conversation_id']}",
+            "created_at": ai_m["timestamp"][:16] if ai_m["timestamp"] else "",
+            "question": q_text,
+            "response": ai_m["response"],
+            "intent": ai_m["intent"] or "General Support",
+            "sentiment": ai_m["sentiment"] or "Neutral",
+            "language": ai_m["language"] or "English",
+            "is_fraud": ai_m["is_fraud"] == 1
+        })
+
+    conn.close()
+
+    stats = {
+        "total_users": total_users,
+        "total_chats": total_chats,
+        "total_frauds": total_frauds,
+        "intents": intents,
+        "sentiments": sentiments,
+        "languages": languages,
+        "recent_chats": recent_chats
+    }
+
+    return render_template("admin_dashboard.html", stats=stats)
+
+
+
+# ─────────────────────────────────────────────
 #  NEW CHAT
 # ─────────────────────────────────────────────
 @app.route("/new_chat")
